@@ -2,11 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 val kspVersion: String by project
 
 plugins {
-    application
     kotlin("jvm")
+    id("maven")
 }
 
-group = "me.admqueiroga"
+group = "me.ademirqueiroga"
 version = "0.9.0-SNAPSHOT"
 
 repositories {

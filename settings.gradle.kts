@@ -4,6 +4,7 @@ pluginManagement {
     plugins {
         id("com.google.devtools.ksp") version kspVersion
         kotlin("jvm") version kotlinVersion
+        id("maven")
     }
     repositories {
         gradlePluginPortal()
