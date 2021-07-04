@@ -11,6 +11,9 @@ version = "0.9.0-SNAPSHOT"
 repositories {
     mavenCentral()
     google()
+    maven {
+        setUrl("https://jitpack.io")
+    }
 }
 
 tasks.withType<KotlinCompile> {
@@ -22,8 +25,16 @@ dependencies {
     implementation(kotlin("reflect"))
     implementation("com.squareup:kotlinpoet:1.7.2")
     implementation("com.google.devtools.ksp:symbol-processing-api:$kspVersion")
+    implementation("com.github.jitpack:gradle-simple:1.0")
+
+
+    testImplementation("junit:junit:4.13")
 }
 
 sourceSets.main {
     java.srcDirs("src/main/kotlin")
+}
+
+tasks.test {
+    useJUnit()
 }
