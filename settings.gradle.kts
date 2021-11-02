@@ -12,6 +12,7 @@ pluginManagement {
     }
 }
 
-
 rootProject.name = "imogen"
 
+include(":processor")
+include(":sample")

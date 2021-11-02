@@ -1,22 +1,24 @@
-/*
-*  @author: Ademir Queiroga <admqueiroga@gmail.com>
-*  @created: 27/03/21
-*/
+package value
 
 import annotations.Generate
-import com.google.devtools.ksp.symbol.*
+import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
+import findAnnotation
+import findArgument
 
 
-data class ModelData constructor(
+data class ModelData(
     val packageName: String,
     val className: String,
     val properties: List<PropertyData>,
     val superInterface: ClassName,
     val inheritedInterfaces: List<ClassName>,
-    val brandedProperties: KSAnnotation?,
+    val generateAnnotation: KSAnnotation?,
 ) {
 
     open class PropertyData(
@@ -34,24 +36,9 @@ data class ModelData constructor(
 
     }
 
-    class DerivedPropertyData(
-        val deriveFrom: String,
-        name: String,
-        type: TypeName,
-        annotations: List<AnnotationData>
-    ) : PropertyData(name, type, annotations) {
-
-        constructor(deriveFrom: String, propertyData: PropertyData) : this(
-            deriveFrom, propertyData.name, propertyData.type, propertyData.annotations
-        )
-
-    }
-
     companion object {
 
-        private const val CLASS_NAME_SUFFIX = "BrandedProperties"
-
-        private fun KSClassDeclaration.extractPropertiesInfo(): List<PropertyData> {
+        private fun KSClassDeclaration.extractPropertiesInfo(): Sequence<PropertyData> {
             return getAllProperties().map { property ->
                 val propType = property.type.resolve()
                 val propDeclaration = propType.declaration
@@ -76,8 +63,7 @@ data class ModelData constructor(
         }
 
         private fun KSPropertyDeclaration.extractPropertyAnnotations(): List<AnnotationData> {
-            val data = ArrayList<AnnotationData>()
-            for (annotation in annotations) {
+            return annotations.map { annotation ->
                 val declaration = annotation.annotationType.resolve().declaration
                 val qualifiedName = (declaration.qualifiedName ?: declaration.simpleName).asString()
                 val annotationArguments = ArrayList<AnnotationData.Argument>()
@@ -85,9 +71,8 @@ data class ModelData constructor(
                     val argName = argument.name?.asString()!!
                     annotationArguments.add(AnnotationData.Argument(argName, argument.value))
                 }
-                data.add(AnnotationData(qualifiedName, annotationArguments))
-            }
-            return data
+                AnnotationData(qualifiedName, annotationArguments)
+            }.toList()
         }
 
         private fun KSClassDeclaration.extractInterfacesClassNames(): List<ClassName> {
@@ -106,22 +91,28 @@ data class ModelData constructor(
         }
 
         fun create(packageName: String, symbol: KSClassDeclaration): ModelData {
-            val brandedProperties = symbol.findAnnotation<Generate>()
-            val brandedPropertiesName = brandedProperties?.findArgument(Generate::name.name)?.value?.toString()
-            val className = if (!brandedPropertiesName.isNullOrEmpty()) brandedPropertiesName else {
-                "${symbol.simpleName.asString()}$CLASS_NAME_SUFFIX"
+            val generateAnnotation = symbol.findAnnotation<Generate>()
+            val prefix = generateAnnotation?.findArgument(Generate::prefix.name)?.value ?: ""
+            val suffix = generateAnnotation?.findArgument(Generate::suffix.name)?.value ?: ""
+            val name = generateAnnotation?.findArgument(Generate::name.name)?.value?.toString()
+            if (name.isNullOrEmpty()) {
+                throw InvalidClassNameException(symbol)
             }
             val superClass = ClassName(packageName, (symbol.qualifiedName ?: symbol.simpleName).asString())
             return ModelData(
                 packageName = packageName,
-                className = className,
-                properties = symbol.extractPropertiesInfo(),
+                className = "$prefix$name$suffix",
+                properties = symbol.extractPropertiesInfo().toList(),
                 superInterface = superClass,
                 inheritedInterfaces = symbol.extractInterfacesClassNames(),
-                brandedProperties = brandedProperties
+                generateAnnotation = generateAnnotation
             )
         }
 
     }
+
+    // TODO: Improve exception message
+    class InvalidClassNameException(val symbol: KSClassDeclaration) :
+        Exception("Invalid value for generated class name. Make sure the name parameter is not empty and is different from inherited classes")
 
 }
