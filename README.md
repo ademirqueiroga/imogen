@@ -123,7 +123,7 @@ This project is still a work in progress. Future updates may include:
 
 ## License
 
-This project is open-source. See the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Author
 
